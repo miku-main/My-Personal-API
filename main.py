@@ -1,15 +1,39 @@
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="My Personal API")
+from fastapi import Depends, FastAPI
+from sqlmodel import Session, select
+
+from database import create_db_and_tables, get_session
+from models import StudySession, StudySessionCreate
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_and_tables()
+    yield
+
+app = FastAPI(title="My Personal API", lifespan=lifespan)
 
 @app.get("/")
 def root():
-    return {"message": "Welcome to My Personal API!"}
+    return {"message": "Welcome to my personal API"}
 
 @app.get("/me")
 def about_me():
     return {
-        "name": "John Doe",
+        "name": "Your Name",
         "role": "Student",
-        "interests": ["Programming", "Reading", "Traveling"],
+        "interests": ["computer science", "cybersecurity"],
     }
+
+@app.post("/study-sessions", response_model=StudySession, status_code=201)
+def log_study_session(data: StudySessionCreate, db: Session = Depends(get_session)):
+    study_session = StudySession.model_validate(data)
+    db.add(study_session)
+    db.commit()
+    db.refresh(study_session)
+    return study_session
+
+@app.get("/study-sessions", response_model=list[StudySession])
+def list_study_sessions(db: Session = Depends(get_session)):
+    statement = select(StudySession).order_by(StudySession.created_at.desc())
+    return db.exec(statement).all()
