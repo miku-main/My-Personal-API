@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Query
 from sqlmodel import Session, select
 
 from database import create_db_and_tables, get_session
-from models import StudySession, StudySessionCreate
+from models import StudySession, StudySessionCreate, GitHubCommit
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,4 +36,16 @@ def log_study_session(data: StudySessionCreate, db: Session = Depends(get_sessio
 @app.get("/study-sessions", response_model=list[StudySession])
 def list_study_sessions(db: Session = Depends(get_session)):
     statement = select(StudySession).order_by(StudySession.created_at.desc())
+    return db.exec(statement).all()
+
+@app.get("/github-commits", response_model=list[GitHubCommit])
+def list_commits(
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_session),
+):
+    statement = (
+        select(GitHubCommit)
+        .order_by(GitHubCommit.committed_at.desc())
+        .limit(limit)
+    )
     return db.exec(statement).all()

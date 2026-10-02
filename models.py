@@ -17,3 +17,11 @@ class StudySession(StudySessionBase, table=True):
 
 class StudySessionCreate(StudySessionBase):
     pass
+
+class GitHubCommit(SQLModel, table=True):
+    sha: str = Field(primary_key=True, max_length=40)
+    repo: str = Field(index=True)
+    message: str
+    committed_at: datetime = Field(sa_type=DateTime(timezone=True), index=True)
+    url: str
+
