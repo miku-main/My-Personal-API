@@ -4,7 +4,8 @@ from fastapi import Depends, FastAPI, Query
 from sqlmodel import Session, select
 
 from database import create_db_and_tables, get_session
-from models import StudySession, StudySessionCreate, GitHubCommit
+from models import StudySession, StudySessionCreate, GitHubCommit, FeedItem, Stats
+from stats import build_stats, build_feed
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,7 +39,7 @@ def list_study_sessions(db: Session = Depends(get_session)):
     statement = select(StudySession).order_by(StudySession.created_at.desc())
     return db.exec(statement).all()
 
-@app.get("/github-commits", response_model=list[GitHubCommit])
+@app.get("/github/commits", response_model=list[GitHubCommit])
 def list_commits(
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_session),
@@ -49,3 +50,14 @@ def list_commits(
         .limit(limit)
     )
     return db.exec(statement).all()
+
+@app.get("/feed", response_model=list[FeedItem])
+def get_feed(
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_session),
+):
+    return build_feed(db, limit)
+
+@app.get("/stats", response_model=Stats)
+def get_stats(db: Session = Depends(get_session)):
+    return build_stats(db)

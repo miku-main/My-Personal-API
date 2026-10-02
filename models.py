@@ -25,3 +25,18 @@ class GitHubCommit(SQLModel, table=True):
     committed_at: datetime = Field(sa_type=DateTime(timezone=True), index=True)
     url: str
 
+class FeedItem(SQLModel):
+    type: str
+    timestamp: datetime
+    title: str
+    details: str | None = None
+    url: str | None = None
+
+class Stats(SQLModel):
+    timezone: str
+    study_sessions: int
+    study_minnutes: int
+    commits: int
+    active_days: int
+    current_streak: int
+    longest_streak: int
