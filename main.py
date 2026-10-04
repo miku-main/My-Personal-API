@@ -9,11 +9,14 @@ Docs at: http://127.0.0.1:8000/docs
 """
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Query, APIRouter
+import anthropic
+from fastapi import Depends, FastAPI, Query, APIRouter, HTTPException
+from assisant import ask_assistant
+
 from sqlmodel import Session, select
 
 from database import create_db_and_tables, get_session
-from models import StudySession, StudySessionCreate, GitHubCommit, FeedItem, Stats
+from models import StudySession, StudySessionCreate, GitHubCommit, FeedItem, Stats, AskRequest, AskResponse
 from security import require_api_key
 from stats import build_stats, build_feed
 
@@ -101,6 +104,18 @@ def get_feed(
     # Everything I've done, from every source, as one timeline.
     # Private: contains study notes and commit details.
     return build_feed(db, limit)
+
+@private.post("/ask", response_model=AskResponse)
+def ask(request: AskRequest, db: Session = Depends(get_session)):
+    """
+    Ask my AI assistant a question about my data.
+    Private: every question costs money (prevents "denital of wallet").
+    """
+    try:
+        return ask_assistant(db, request.question)
+    except anthropic.APIError:
+        # Don't leak provider error details to the client.
+        raise HTTPException(status_code=502, detail="AI service unavailable")
 
 # Must come after the private routes are defined: inclue_router copies the routes into the main app.
 app.include_router(private)

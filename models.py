@@ -69,3 +69,14 @@ class Stats(SQLModel):
     active_days: int
     current_streak: int
     longest_streak: int
+    
+class AskRequest(SQLModel):
+    """A question for the AI assistant. Capped length limits cost per request."""
+    question: str = Field(min_length=1, max_length=500)
+
+class AskResponse(SQLModel):
+    """The answer, plus token counts so cost per question can be measured."""
+    answer: str
+    model: str
+    input_tokens: int
+    output_tokens: int
