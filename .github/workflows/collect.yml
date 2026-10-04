@@ -1,0 +1,33 @@
+# Runs the GitHub collector on a schedule so new commits are saved
+# automatically, without my computer or the web server being involved.
+name: Collect GitHub commits
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6 hours
+  workflow_dispatch:      # adds a "Run workflow" button for manual runs
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10   # kill the job if it hangs instead of burning minutes
+
+    # Least privilege for the workflow's built-in token: read-only.
+    permissions:
+      contents: read
+    
+    steps:
+      - uses: actions/checkout@v5   # download the repo's code
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"  # use the same version as the web server
+          cache: "pip"  # reuse downloads between runs
+      
+      - run: pip install -r requirements.txt  # install dependencies
+
+      - run: python github_collector.py  # run the collector script
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}  # pass the database URL to the script
+          GITHUB_TOKEN: ${{ secrets.COLLECTOR_TOKEN }}  # pass the GitHub token to the script
+          GITHUB_USER: ${{ secrets.repository_owner }}  # pass the GitHub username to the script
