@@ -1,0 +1,29 @@
+# Continuous integration: run the full test suite on every push and pull request, so broken code is caught before (or as) it's deployed.
+
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      # No secrets needed: tests use fake keys and an in-memory datebase.
+
+      - run: pytest -v

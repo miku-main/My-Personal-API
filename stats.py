@@ -3,7 +3,7 @@ Feed and stats logic: combines all data source into one timeline and calculates 
 Kept separate from main.py: main.py handles the web layer, this file does the actual work and can be reused elsewhere.
 """
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
@@ -19,9 +19,20 @@ load_dotenv()
 TIMEZONE_NAME = os.getenv("TIMEZONE", "UTC")
 LOCAL_TZ = ZoneInfo(TIMEZONE_NAME)
 
+def to_local(moment: datetime) -> datetime:
+    """Convert a stored timestamp to my local time zone.
+    Everything is stored in UTC. Some databases drop the time zone and return a "naive" datetime. 
+    A naive datetime would otherwise be treated as the COMPUTER's local time,
+    which differs between my Mac, Windows, and servers. So naive values are explicitly marked UTC.
+    (This hidden assumption was found by writing tests.)
+    """
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(LOCAL_TZ)
+
 def to_local_date(moment: datetime) -> date:
-    # Convery a UTC timestamp to the calendar date in my time zone.
-    return moment.astimezone(LOCAL_TZ).date()
+    # The calender date of a timestamp in my time zone.
+    return to_local(moment).date()
 
 def build_feed(db: Session, limit: int) -> list[FeedItem]:
     """
@@ -62,10 +73,11 @@ def build_feed(db: Session, limit: int) -> list[FeedItem]:
         for c in commits
     ]
     
-    items.sort(key=lambda item: item.timestamp, reverse=True)
+    items.sort(key=lambda item: to_local(item.timestamp), reverse=True)
     return items[:limit]
 
-def caluculate_streaks(active_days: set[date], today: date) -> tuple[int, int]:
+def calculate_streaks(active_days: set[date], today: date) -> tuple[int, int]:
+    # Return (current_streak, longest_streak) in days.
     if not active_days:
         return 0, 0
     
@@ -79,7 +91,7 @@ def caluculate_streaks(active_days: set[date], today: date) -> tuple[int, int]:
         longest = max(longest, run)
         previous = day
     
-    # Current streak: count backware from today.
+    # Current streak: count backward from today.
     # Design choice: if nothing is logged yet today, start from yesterday,
     # so the streak doesn't show 0 every morning before I log anything.
     current = 0
@@ -108,16 +120,16 @@ def build_stats(db: Session) -> Stats:
     active_days = {to_local_date(t) for t in timestamps}
     
     today = datetime.now(LOCAL_TZ).date()
-    current_streak, longest_streak = caluculate_streaks(active_days, today)
+    current_streak, longest_streak = calculate_streaks(active_days, today)
     
     return Stats(
         timezone=TIMEZONE_NAME,
         study_sessions=session_count,
-        study_minnutes=study_minutes,
+        study_minutes=study_minutes,
         commits=commit_count,
         active_days=len(active_days),
         current_streak=current_streak,
-        longest_streak=longest_streak
+        longest_streak=longest_streak,
     )
     
     

@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from sqlmodel import Session
 
 from models import AskResponse
-from stats import LOCAL_TZ, TIMEZONE_NAME, build_feed, build_stats
+from stats import LOCAL_TZ, TIMEZONE_NAME, build_feed, build_stats, to_local
 
 load_dotenv()
 
@@ -65,7 +65,7 @@ def build_context(db: Session) -> str:
         "recent_activity": [
             {
                 "type": item.type,
-                "local_time": item.timestamp.astimezone(LOCAL_TZ).strftime("%A %Y-%m-%d %H:%M"),
+                "local_time": to_local(item.timestamp).strftime("%A %Y-%m-%d %H:%M"),
                 "title": item.title,
                 "details": item.details,
             }

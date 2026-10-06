@@ -64,7 +64,7 @@ class Stats(SQLModel):
     # Summary metrics reutnred by /stats.
     timezone: str
     study_sessions: int
-    study_minnutes: int
+    study_minutes: int
     commits: int
     active_days: int
     current_streak: int
