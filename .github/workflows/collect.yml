@@ -30,4 +30,4 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}  # pass the database URL to the script
           GITHUB_TOKEN: ${{ secrets.COLLECTOR_TOKEN }}  # pass the GitHub token to the script
-          GITHUB_USER: ${{ secrets.repository_owner }}  # pass the GitHub username to the script
+          GITHUB_USERNAME: ${{ github.repository_owner }}  # pass the GitHub username to the script
